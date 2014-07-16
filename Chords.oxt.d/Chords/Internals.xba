@@ -1,0 +1,486 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE script:module PUBLIC "-//OpenOffice.org//DTD OfficeDocument 1.0//EN" "module.dtd">
+<script:module xmlns:script="http://openoffice.org/2000/script" script:name="Internals" script:language="StarBasic">Option Explicit
+
+DIM arScale(6)      &apos; note names WITHOUT accidentals
+DIM arNoteNames(11) &apos; note names WITH accidentals, offset from C
+DIM flat$, sharp$, fflat$, ssharp$
+
+TYPE aChord
+	root AS STRING
+	modifier AS STRING
+END TYPE
+
+FUNCTION _chordRegex AS STRING
+	_chordRegex = &quot;\[([A-G][#b&quot;&amp; flat$ &amp; sharp$ &amp; fflat$ &amp; ssharp$ &amp; &quot;]?)([^\]]*)\]&quot;
+END FUNCTION
+
+FUNCTION crd2str(BYVAL crd AS aChord) AS STRING
+	crd2str = crd.root &amp; crd.modifier
+END FUNCTION
+
+FUNCTION str2crd(BYVAL instr AS STRING) AS aChord
+	DIM crd AS NEW aChord
+	DIM root AS STRING
+
+	root = UCase(stripFirstChar(instr))
+	SELECT CASE readFirstChar(instr) &apos; get #/b if required
+		CASE &quot;b&quot;, flat$:
+			root = root &amp; flat$
+			stripFirstChar(instr)
+		CASE &quot;#&quot;, sharp$:
+			root = root &amp; sharp$
+			stripFirstChar(instr)
+		CASE ssharp$:
+			root = root &amp; ssharp$
+			stripFirstChar(instr)
+		CASE fflat$:
+			root = root &amp; fflat$
+			stripFirstChar(instr)
+	END SELECT
+	crd.root = root
+	crd.modifier = instr
+	
+	str2crd = crd
+END FUNCTION
+
+SUB initGlobals 
+	flat$   = CHR(CLNG(&amp;H266D))
+	sharp$  = CHR(CLNG(&amp;H266F))
+	ssharp$ = CHR(CLNG(&amp;H21C8))
+	fflat$  = CHR(CLNG(&amp;H21CA))
+
+	arScale = ARRAY(&quot;C&quot;, &quot;D&quot;, &quot;E&quot;, &quot;F&quot;, &quot;G&quot;, &quot;A&quot;, &quot;B&quot;)
+
+	REM We define the LAST element of each array to be a sensible key
+	REM then in the transpose function if we fall off the end we 
+	REM are still transposing nicely
+	arNoteNames(0)  = ARRAY(&quot;B&quot; &amp; sharp$,  &quot;D&quot; &amp; fflat$, &quot;C&quot;)
+	arNoteNames(1)  = ARRAY(&quot;B&quot; &amp; ssharp$, &quot;C&quot; &amp; sharp$, &quot;D&quot; &amp; flat$)
+	arNoteNames(2)  = ARRAY(&quot;C&quot; &amp; ssharp$, &quot;E&quot; &amp; fflat$, &quot;D&quot;)
+	arNoteNames(3)  = ARRAY(&quot;D&quot; &amp; sharp$,  &quot;F&quot; &amp; fflat$, &quot;E&quot; &amp; flat$)
+	arNoteNames(4)  = ARRAY(&quot;D&quot; &amp; ssharp$, &quot;F&quot; &amp; flat$,  &quot;E&quot;)
+	arNoteNames(5)  = ARRAY(&quot;E&quot; &amp; sharp$,  &quot;G&quot; &amp; fflat$, &quot;F&quot;)
+	arNoteNames(6)  = ARRAY(&quot;E&quot; &amp; ssharp$, &quot;G&quot; &amp; flat$,  &quot;F&quot; &amp; sharp$)
+	arNoteNames(7)  = ARRAY(&quot;F&quot; &amp; ssharp$, &quot;A&quot; &amp; fflat$, &quot;G&quot;)
+	arNoteNames(8)  = ARRAY(&quot;G&quot; &amp; sharp$,  &quot;A&quot; &amp; flat$)
+	arNoteNames(9)  = ARRAY(&quot;G&quot; &amp; ssharp$, &quot;B&quot; &amp; fflat$, &quot;A&quot;)
+	arNoteNames(10) = ARRAY(&quot;A&quot; &amp; sharp$,  &quot;C&quot; &amp; fflat$, &quot;B&quot; &amp; flat$)
+	arNoteNames(11) = ARRAY(&quot;A&quot; &amp; ssharp$, &quot;C&quot; &amp; flat$,  &quot;B&quot;)
+END SUB
+
+&apos;******************************************************************
+&apos;Author: Andrew Pitonyak
+&apos;email: andrew@pitonyak.org
+Sub SearchSelectedText
+	Dim oCurs(), i%, j%
+	DIM validTrFrom AS BOOLEAN, validTrTo AS BOOLEAN
+
+	validTrFrom = FALSE
+	validTrTo = FALSE
+
+	REM Initialise transposition arrays and validate dialog input
+	initGlobals
+    DlgHandlers.transposeFrom = crd2str(str2crd(DlgHandlers.transposeFrom))
+    DlgHandlers.transposeTo = crd2str(str2crd(DlgHandlers.transposeTo))
+
+	FOR i% = 0 TO UBOUND(arNoteNames)
+		FOR j% = 0 TO UBOUND(arNoteNames(i))
+			IF arNoteNames(i%)(j%) = DlgHandlers.transposeFrom THEN
+				validTrFrom = TRUE
+			END IF
+			IF arNoteNames(i%)(j%) = DlgHandlers.transposeTo THEN
+				validTrTo = TRUE
+			END IF
+		NEXT j%
+	NEXT i%
+	
+	IF validTrFrom AND validTrTo THEN
+		If Not CreateSelectedTextIterator(ThisComponent, _
+				&quot;Search text in the entire document?&quot;, oCurs()) Then Exit Sub
+		For i% = LBound(oCurs()) To UBound(oCurs())
+			SearchSelectedWorker(oCurs(i%, 0), oCurs(i%, 1), ThisComponent)
+		Next i%
+	ELSE 
+		MSGBOX(&quot;Invalid transposition keys&quot;, 0, &quot;ERROR&quot;)
+	END IF
+End Sub
+
+&apos;******************************************************************
+&apos;Author: Andrew Pitonyak
+&apos;email: andrew@pitonyak.org
+Sub SearchSelectedWorker(oLCurs, oRCurs, oDoc)
+	If IsNull(oLCurs) Or IsNull(oRCurs) Or IsNull(oDoc) Then Exit Sub
+	If oDoc.Text.compareRegionEnds(oLCurs, oRCurs) &lt;= 0 Then Exit Sub
+	oLCurs.goRight(0, False)
+	
+	Dim vDescriptor, vFound
+	DIM search$
+	vDescriptor = oDoc.createSearchDescriptor()
+REM CONSTRUCT OUR FINDER
+	vDescriptor.SearchCaseSensitive = TRUE
+	vDescriptor.SearchRegularExpression = TRUE
+	search$ = _chordRegex
+	vDescriptor.setSearchString(_chordRegex) 
+
+	&apos; There is no reason to perform a findFirst.
+	vFound = oDoc.findNext(oLCurs, vDescriptor)
+
+	Do While Not IsNull(vFound)
+		REM If Not vFound.hasElements() Then Exit Do
+		&apos;See if we searched past the end
+		&apos;Not really safe because this assumes that vFound and oRCurs
+		&apos;are in the same text object (warning).
+		If -1 = oDoc.Text.compareRegionEnds(vFound, oRCurs) Then Exit Do
+		
+REM DO SOMETHING WITH THE FOUND STRING
+		DIM oldStr, newStr, str
+		DIM oldChord AS aChord
+		DIM newChord AS aChord
+		
+		oldStr = vFound.getString
+		str = oldStr
+
+		stripFirstChar(str)            &apos; lose initial &apos;[&apos;
+		stripLastChar(str)             &apos; lose final &apos;]&apos;
+
+		oldChord = str2crd(str)
+		
+		newChord = transposeChord(oldChord, DlgHandlers.transposeFrom, DlgHandlers.transposeTo)
+
+		newStr = &quot;[&quot; &amp; crd2str(newChord) &amp; &quot;]&quot;
+		vFound.setString(newStr)
+		&apos;MSGBOX(&quot;REPLACED &quot; + oldStr + CHR(13) + &quot;WITH &quot; + newStr)
+		
+		
+		vFound = ThisComponent.findNext( vFound.End, vDescriptor)
+	Loop
+End Sub
+
+&apos;******************************************************************
+&apos;Author: Andrew Pitonyak
+&apos;email:  andrew@pitonyak.org
+&apos;sPrompt : how to ask if should iterate over the entire text
+&apos;oCurs() : Has the return cursors
+&apos;Returns true if should iterate and false if should not
+Function CreateSelectedTextIterator(oDoc, sPrompt$, oCurs()) As Boolean
+	Dim lSelCount As Long       &apos;Number of selected sections.
+	Dim lWhichSelection As Long &apos;Current selection item.
+
+	DIM oSels &apos;All of the selections
+	DIM oSel  &apos;A single selection.
+	DIM oLCurs &apos;Cursor to the left of the current selection.
+	DIM oRCurs &apos;Cursor to the right of the current selection.
+
+	CreateSelectedTextIterator = True
+	If Not IsAnythingSelected(ThisComponent) Then
+		Dim i%
+		i% = 1
+		&apos;i% = MsgBox(&quot;No text selected!&quot; + Chr(13) + sPrompt, 1 OR 32 OR 256, &quot;Warning&quot;)
+		If i% = 1 Then
+			oLCurs = oDoc.getText().createTextCursor()
+			oLCurs.gotoStart(False)
+			oRCurs = oDoc.getText().createTextCursor()
+			oRCurs.gotoEnd(False)
+			oCurs = DimArray(0, 1)
+			oCurs(0, 0) = oLCurs
+			oCurs(0, 1) = oRCurs
+		Else
+			oCurs = DimArray()
+			CreateSelectedTextIterator = False
+		End If
+	Else
+		oSels = ThisComponent.getCurrentSelection()
+		lSelCount = oSels.getCount()
+		oCurs = DimArray(lSelCount - 1, 1)
+		For lWhichSelection = 0 To lSelCount - 1
+			oSel = oSels.getByIndex(lWhichSelection)
+			REM If I want to know if NO text is selected, I could
+			REM do the following:
+			REM oLCurs = oSel.getText().CreateTextCursorByRange(oSel)
+			REM If oLCurs.isCollapsed() Then ...
+			oLCurs = GetLeftMostCursor(oSel)
+			oRCurs = GetRightMostCursor(oSel)
+			oCurs(lWhichSelection, 0) = oLCurs
+			oCurs(lWhichSelection, 1) = oRCurs
+		Next
+	End If
+End Function
+
+Function IsAnythingSelected(oDoc As Object) As Boolean
+	Dim oSels &apos;All of the selections
+	Dim oSel &apos;A single selection
+	Dim oCursor &apos;A temporary cursor
+
+	IsAnythingSelected = False
+	If IsNull(oDoc) Then Exit Function
+	&apos; The current selection in the current controller.
+	&apos;If there is no current controller, it returns NULL.
+	oSels = oDoc.getCurrentSelection()
+	If IsNull(oSels) Then Exit Function
+
+	REM I have never seen a selection count of zero
+	If oSels.getCount() = 0 Then Exit Function
+
+	REM If there are multiple selections, then assume
+	REM something is selected
+	If oSels.getCount() &gt; 1 Then
+		IsAnythingSelected = True
+	Else
+		REM If only one thing is selected, however, then check to see
+		REM if the selection is collapsed. In other words, see if the
+		REM end location is the same as the starting location.
+		REM Notice that I use the text object from the selection object
+		REM because it is safer than assuming that it is the same as the
+		REM documents text object.
+		oSel = oSels.getByIndex(0)
+		oCursor = oSel.getText().CreateTextCursorByRange(oSel)
+		If Not oCursor.IsCollapsed() Then IsAnythingSelected = True
+	End If
+End Function
+
+&apos;******************************************************************
+&apos;Author: Andrew Pitonyak
+&apos;email:andrew@pitonyak.org
+&apos;oSel is a text selection or cursor range
+Function GetLeftMostCursor(oSel As Object) As Object
+	Dim oRange &apos;Left most range.
+	Dim oCursor &apos;Cursor at the left most range.
+
+	If oSel.getText().compareRegionStarts(oSel.getEnd(), oSel) &gt;= 0 Then
+		oRange = oSel.getEnd()
+	Else
+		oRange = oSel.getStart()
+	End If
+	oCursor = oSel.getText().CreateTextCursorByRange(oRange)
+	oCursor.goRight(0, False)
+	GetLeftMostCursor = oCursor
+End Function
+&apos;******************************************************************
+&apos;Author: Andrew Pitonyak
+&apos;email: andrew@pitonyak.org
+&apos;oSel is a text selection or cursor range
+Function GetRightMostCursor(oSel As Object) As Object
+	Dim oRange &apos;Right most range.
+	Dim oCursor &apos;Cursor at the right most range.
+
+	If oSel.getText().compareRegionStarts(oSel.getEnd(), oSel) &gt;= 0 Then
+		oRange = oSel.getStart()
+	Else
+		oRange = oSel.getEnd()
+	End If
+	oCursor = oSel.getText().CreateTextCursorByRange(oRange)
+	oCursor.goLeft(0, False)
+	GetRightMostCursor = oCursor
+End Function
+
+
+
+sub _searchRegexSelected
+rem ----------------------------------------------------------------------
+rem define variables
+dim document   as object
+dim dispatcher as object
+rem ----------------------------------------------------------------------
+rem get access to the document
+document   = ThisComponent.CurrentController.Frame
+dispatcher = createUnoService(&quot;com.sun.star.frame.DispatchHelper&quot;)
+
+rem ----------------------------------------------------------------------
+dim args1(18) as new com.sun.star.beans.PropertyValue
+args1(0).Name = &quot;SearchItem.StyleFamily&quot;
+args1(0).Value = 2
+args1(1).Name = &quot;SearchItem.CellType&quot;
+args1(1).Value = 0
+args1(2).Name = &quot;SearchItem.RowDirection&quot;
+args1(2).Value = true
+args1(3).Name = &quot;SearchItem.AllTables&quot;
+args1(3).Value = false
+args1(4).Name = &quot;SearchItem.Backward&quot;
+args1(4).Value = false
+args1(5).Name = &quot;SearchItem.Pattern&quot;
+args1(5).Value = false
+args1(6).Name = &quot;SearchItem.Content&quot;
+args1(6).Value = false
+args1(7).Name = &quot;SearchItem.AsianOptions&quot;
+args1(7).Value = false
+args1(8).Name = &quot;SearchItem.AlgorithmType&quot;
+args1(8).Value = 1
+args1(9).Name = &quot;SearchItem.SearchFlags&quot;
+args1(9).Value = 71680
+args1(10).Name = &quot;SearchItem.SearchString&quot;
+args1(10).Value = _chordRegex
+args1(11).Name = &quot;SearchItem.ReplaceString&quot;
+args1(11).Value = &quot;&quot;
+args1(12).Name = &quot;SearchItem.Locale&quot;
+args1(12).Value = 255
+args1(13).Name = &quot;SearchItem.ChangedChars&quot;
+args1(13).Value = 2
+args1(14).Name = &quot;SearchItem.DeletedChars&quot;
+args1(14).Value = 2
+args1(15).Name = &quot;SearchItem.InsertedChars&quot;
+args1(15).Value = 2
+args1(16).Name = &quot;SearchItem.TransliterateFlags&quot;
+args1(16).Value = 1280
+args1(17).Name = &quot;SearchItem.Command&quot;
+args1(17).Value = 1
+args1(18).Name = &quot;Quiet&quot;
+args1(18).Value = true
+
+dispatcher.executeDispatch(document, &quot;.uno:ExecuteSearch&quot;, &quot;&quot;, 0, args1())
+
+
+end sub
+
+
+sub _searchRegexAll
+rem ----------------------------------------------------------------------
+rem define variables
+dim document   as object
+dim dispatcher as object
+rem ----------------------------------------------------------------------
+rem get access to the document
+document   = ThisComponent.CurrentController.Frame
+dispatcher = createUnoService(&quot;com.sun.star.frame.DispatchHelper&quot;)
+
+rem ----------------------------------------------------------------------
+dim args1(18) as new com.sun.star.beans.PropertyValue
+args1(0).Name = &quot;SearchItem.StyleFamily&quot;
+args1(0).Value = 2
+args1(1).Name = &quot;SearchItem.CellType&quot;
+args1(1).Value = 0
+args1(2).Name = &quot;SearchItem.RowDirection&quot;
+args1(2).Value = true
+args1(3).Name = &quot;SearchItem.AllTables&quot;
+args1(3).Value = false
+args1(4).Name = &quot;SearchItem.Backward&quot;
+args1(4).Value = false
+args1(5).Name = &quot;SearchItem.Pattern&quot;
+args1(5).Value = false
+args1(6).Name = &quot;SearchItem.Content&quot;
+args1(6).Value = false
+args1(7).Name = &quot;SearchItem.AsianOptions&quot;
+args1(7).Value = false
+args1(8).Name = &quot;SearchItem.AlgorithmType&quot;
+args1(8).Value = 1
+args1(9).Name = &quot;SearchItem.SearchFlags&quot;
+args1(9).Value = 65536
+args1(10).Name = &quot;SearchItem.SearchString&quot;
+args1(10).Value = _chordRegex
+args1(11).Name = &quot;SearchItem.ReplaceString&quot;
+args1(11).Value = &quot;&quot;
+args1(12).Name = &quot;SearchItem.Locale&quot;
+args1(12).Value = 255
+args1(13).Name = &quot;SearchItem.ChangedChars&quot;
+args1(13).Value = 2
+args1(14).Name = &quot;SearchItem.DeletedChars&quot;
+args1(14).Value = 2
+args1(15).Name = &quot;SearchItem.InsertedChars&quot;
+args1(15).Value = 2
+args1(16).Name = &quot;SearchItem.TransliterateFlags&quot;
+args1(16).Value = 1280
+args1(17).Name = &quot;SearchItem.Command&quot;
+args1(17).Value = 1
+args1(18).Name = &quot;Quiet&quot;
+args1(18).Value = true
+
+dispatcher.executeDispatch(document, &quot;.uno:ExecuteSearch&quot;, &quot;&quot;, 0, args1())
+
+
+end sub
+
+FUNCTION readFirstChar(instr)
+	readFirstChar = Left(instr, 1)
+END FUNCTION
+
+FUNCTION stripFirstChar(instr)
+	DIM firstChar
+	firstChar = readFirstChar(instr)
+	instr = RIGHT(instr, LEN(instr) - 1)
+	stripFirstChar = firstChar
+END FUNCTION
+
+FUNCTION readLastChar(instr)
+	readLastChar = Right(instr, 1)
+END FUNCTION
+
+FUNCTION stripLastChar(instr)
+	DIM lastChar
+	lastChar = readLastChar(instr)
+	instr = LEFT(instr, LEN(instr) - 1)
+	stripLastChar = lastChar
+END FUNCTION
+
+FUNCTION transposeChord(BYVAL crdFrom AS aChord,  BYVAL oldKey AS STRING, BYVAL newKey AS STRING) AS aChord
+	DIM crdTo AS NEW aChord
+	DIM crdFromStr AS STRING, crdToStr AS STRING
+	DIM crdFromNoteLetter AS STRING, crdToNoteLetter AS STRING
+	DIM scaleOffset AS INTEGER, scaleFrom AS INTEGER, scaleTo AS INTEGER
+	DIM semitoneOffset AS INTEGER, semitoneFrom AS INTEGER, semitoneTo AS INTEGER
+	DIM crdFromSemitoneOffset AS INTEGER, crdToSemitoneOffset AS INTEGER
+	DIM crdFromScaleOffset AS INTEGER, crdToScaleOffset AS INTEGER
+
+	DIM i AS INTEGER, j AS INTEGER
+	DIM debug
+	
+	REM normalize keys
+	oldKey = crd2str(str2crd(oldKey))
+	newKey = crd2str(str2crd(newKey))
+	
+	debug = &quot;(&quot; &amp; crdFrom.root &amp; &quot;)(&quot; &amp; crdFrom.modifier &amp; &quot;)&quot;
+	crdTo = crdFrom
+	crdFromStr = crd2str(crdFrom)
+	crdFromNoteLetter = readFirstChar(crdFrom.root)
+
+	&apos; get transposition in semitones
+	FOR i = 0 TO UBOUND(arNoteNames)
+		FOR j = 0 TO UBOUND(arNoteNames(i))
+			debug = arNoteNames(i)(j)
+			IF arNoteNames(i)(j) = oldKey THEN
+				semitoneFrom = i
+			END IF
+			IF arNoteNames(i)(j) = newKey THEN
+				semitoneTo = i
+			END IF
+			IF arNoteNames(i)(j) = crdFrom.root THEN
+				crdFromSemitoneOffset = i
+			END IF
+		NEXT j
+	NEXT i
+	semitoneOffset = ((semitoneTo + UBOUND(arNoteNames, 1) + 1) - semitoneFrom) MOD (UBOUND(arNoteNames) + 1)
+
+	&apos; get transposition of note letter
+	FOR i = 0 TO UBOUND(arScale)
+		debug = arScale(i)
+		IF arScale(i) = readFirstChar(oldKey) THEN
+			scaleFrom = i
+		END IF
+		IF arScale(i) = readFirstChar(newKey) THEN
+			scaleTo = i
+		END IF
+		IF arScale(i) = crdFromNoteLetter THEN
+			crdFromScaleOffset = i
+		END IF
+	NEXT i
+	scaleOffset = ((scaleTo + UBOUND(arScale) + 1) - scaleFrom) MOD (UBOUND(arScale) + 1)
+
+	crdToScaleOffset = (crdFromScaleOffset + scaleOffset) MOD (UBOUND(arScale) + 1)
+	crdToSemitoneOffset = (crdFromSemitoneOffset + semitoneOffset) MOD (UBOUND(arNoteNames) + 1)
+	crdToNoteLetter = arScale(crdToScaleOffset)
+	
+	FOR i = 0 TO UBOUND(arNoteNames(crdToSemitoneOffset))
+		crdTo.root = arNoteNames(crdToSemitoneOffset)(i) &apos; set the new chordroot
+		IF readFirstChar(arNoteNames(crdToSemitoneOffset)(i)) = crdToNoteLetter THEN
+			&apos; IF the notename is a valid transposition, then break loop
+			&apos; IF there is no valid notename transposition (ie we need triple sharp/flat)
+			&apos; then we fall off the end and still get a sensible chord
+			EXIT FOR
+		END IF
+	NEXT i
+
+	crdToStr = crd2str(crdTo)
+
+	transposeChord = crdTo
+END FUNCTION
+
+</script:module>

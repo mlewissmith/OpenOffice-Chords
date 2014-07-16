@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE script:module PUBLIC "-//OpenOffice.org//DTD OfficeDocument 1.0//EN" "module.dtd">
+<script:module xmlns:script="http://openoffice.org/2000/script" script:name="UserMacros" script:language="StarBasic">Option Explicit
+
+
+SUB transposeChords
+	DlgHandlers.dlgOpen
+END SUB
+
+SUB findAllChordsInDocument
+	Internals._searchRegexAll
+END SUB
+
+SUB findAllChordsInSelection
+	Internals._searchRegexSelected
+END SUB
+</script:module>

@@ -53,3 +53,11 @@ Run `BasicAddonBuilder`
       - License: Public Domain (UNLICENSE)
    * Extension description
    * Publish
+
+
+See Also
+--------
+
+http://ooolilypond.sourceforge.net/
+
+Also provided: `UkuleleFretBoard.ly` template for OOoLilyPond.

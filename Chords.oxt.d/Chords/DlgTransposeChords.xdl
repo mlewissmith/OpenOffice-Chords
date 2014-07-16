@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE dlg:window PUBLIC "-//OpenOffice.org//DTD OfficeDocument 1.0//EN" "dialog.dtd">
+<dlg:window xmlns:dlg="http://openoffice.org/2000/dialog" xmlns:script="http://openoffice.org/2000/script" dlg:id="DlgTransposeChords" dlg:left="90" dlg:top="199" dlg:width="131" dlg:height="75" dlg:closeable="true" dlg:moveable="true">
+ <dlg:styles>
+  <dlg:style dlg:style-id="0" dlg:font-weight="150"/>
+ </dlg:styles>
+ <dlg:bulletinboard>
+  <dlg:text dlg:style-id="0" dlg:id="Label1" dlg:tab-index="0" dlg:left="0" dlg:top="5" dlg:width="35" dlg:height="11" dlg:value="Transpose"/>
+  <dlg:text dlg:id="Label2" dlg:tab-index="5" dlg:left="0" dlg:top="20" dlg:width="15" dlg:height="10" dlg:value="From"/>
+  <dlg:textfield dlg:id="transposeFrom" dlg:tab-index="1" dlg:left="15" dlg:top="20" dlg:width="15" dlg:height="15" dlg:maxlength="2" dlg:value="C"/>
+  <dlg:text dlg:id="Label3" dlg:tab-index="6" dlg:left="30" dlg:top="20" dlg:width="15" dlg:height="10" dlg:value="To"/>
+  <dlg:textfield dlg:id="transposeTo" dlg:tab-index="2" dlg:left="45" dlg:top="20" dlg:width="15" dlg:height="15" dlg:maxlength="2" dlg:value="C"/>
+  <dlg:button dlg:id="btnOk" dlg:tab-index="3" dlg:left="0" dlg:top="40" dlg:width="30" dlg:height="20" dlg:default="true" dlg:value="OK">
+   <script:event script:event-name="on-performaction" script:macro-name="vnd.sun.star.script:Chords.DlgHandlers.dlgOkButtonHandler?language=Basic&amp;location=application" script:language="Script"/>
+  </dlg:button>
+  <dlg:button dlg:id="btnCancel" dlg:tab-index="4" dlg:left="30" dlg:top="40" dlg:width="30" dlg:height="20" dlg:value="Cancel">
+   <script:event script:event-name="on-performaction" script:macro-name="vnd.sun.star.script:Chords.DlgHandlers.dlgCancelButtonHandler?language=Basic&amp;location=application" script:language="Script"/>
+  </dlg:button>
+  <dlg:text dlg:id="Label4" dlg:tab-index="7" dlg:left="66" dlg:top="9" dlg:width="62" dlg:height="52" dlg:value="Use &apos;#&apos; or &apos;b&apos; to specify sharp or flat" dlg:multiline="true"/>
+ </dlg:bulletinboard>
+</dlg:window>
