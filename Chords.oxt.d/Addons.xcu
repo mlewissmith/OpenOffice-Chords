@@ -14,7 +14,7 @@
 					<value>Chords</value>
 				</prop>
 				<node oor:name="Submenu">
-				<node oor:name="m1" oor:op="replace">
+				<node oor:name="m001" oor:op="replace">
 					<prop oor:name="Context" oor:type="xs:string">
 						<value>com.sun.star.text.TextDocument</value>
 					</prop>
@@ -28,7 +28,7 @@
 						<value>_self</value>
 					</prop>
 				</node>
-				<node oor:name="m2" oor:op="replace">
+				<node oor:name="m002" oor:op="replace">
 					<prop oor:name="Context" oor:type="xs:string">
 						<value>com.sun.star.text.TextDocument</value>
 					</prop>
@@ -42,7 +42,7 @@
 						<value>_self</value>
 					</prop>
 				</node>
-				<node oor:name="m3" oor:op="replace">
+				<node oor:name="m003" oor:op="replace">
 					<prop oor:name="Context" oor:type="xs:string">
 						<value>com.sun.star.text.TextDocument</value>
 					</prop>
