@@ -1,17 +1,14 @@
 OpenOffice-Chords
 =================
 
-OpenOffice macro package: transpose chordnames in OOo text documents
-
-(also LibreOffice and whatnot)
-
+Transpose chordnames in OpenOffice/LibreOffice text documents
 
 
 Installation
 ------------
 
    * Download `Chords-X.Y.Z.oxt`
-   * (LibreOffice) `Tools->`Extension Manager...`->`Add`
+   * `Tools->Extension Manager...->Add`
 
 
 Usage
@@ -23,7 +20,8 @@ This extension adds a new menu `Chords`
    * `Chords/Find all chords in document`
    * `Chords/Find all chords in selection`
 
-A chord is specified in the text in the usual way, *surronded by square brackets*.
+A chord is specified in the text in the usual way, *surrounded by square brackets*.
+
 For example: `[A]` `[Cdim]` `[Bb7]` `[G#m]`
 
 
@@ -37,8 +35,8 @@ Packaged using BasicAddonBuilder
 
 Hack away at the macros & dialog boxes
 
-   * `Tools`->`Macros`->`Organise Macros`->`LibreOffice Basic`
-   * `Tools`->`Macros`->`Organise Dialogs...`
+   * `Tools->Macros->Organise Macros->LibreOffice Basic`
+   * `Tools->Macros->Organise Dialogs...`
 
 Run `BasicAddonBuilder`
 
