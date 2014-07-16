@@ -1,1 +1,0 @@
-Extensions packaged using BasicAddonBuilder
