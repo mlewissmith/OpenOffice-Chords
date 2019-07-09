@@ -2,30 +2,25 @@
 \include "predefined-ukulele-fretboards.ly"
 #(set-global-staff-size %{OOoLilyPondStaffSize%}20%{OOoLilyPondEnd%})
 
-\storePredefinedDiagram #default-fret-table \chordmode {d:aug}
-                        #ukulele-tuning
-                        #"3;2;2;1;"
-\storePredefinedDiagram #default-fret-table \chordmode {bes:3.5.9}
-                        #ukulele-tuning
-                        #"3;2;1;3;"
-\storePredefinedDiagram #default-fret-table \chordmode {e:m}
-                        #ukulele-tuning
-                        #"o;4;3;2;"
-\storePredefinedDiagram #default-fret-table \chordmode {e':7}
-                        #ukulele-tuning
-                        #"4-(;4;4-);5;"
-\storePredefinedDiagram #default-fret-table \chordmode {f:7}
-                        #ukulele-tuning
-                        #"2;3;1;o;"
-\storePredefinedDiagram #default-fret-table \chordmode {fis,}
-                        #ukulele-tuning
-                        #"x;1;2;1;"
-\storePredefinedDiagram #default-fret-table \chordmode {fis'}
-                        #ukulele-tuning
-                        #"6-(;6;6-);9;"
-\storePredefinedDiagram #default-fret-table \chordmode {f'}
-                        #ukulele-tuning
-                        #"5-(;5;5-);8;"
+
+\storePredefinedDiagram #default-fret-table \chordmode {c:5^3}     #ukulele-tuning   #"o;o;3;3;"
+\storePredefinedDiagram #default-fret-table \chordmode {c:4+.5^3}  #ukulele-tuning   #"o;o;2;3;"
+\storePredefinedDiagram #default-fret-table \chordmode {d:aug}     #ukulele-tuning   #"3;2;2;1;"
+\storePredefinedDiagram #default-fret-table \chordmode {d:sus4}    #ukulele-tuning   #"2;2;3;o;"
+\storePredefinedDiagram #default-fret-table \chordmode {d:7}       #ukulele-tuning   #"2;o;2;o;"
+\storePredefinedDiagram #default-fret-table \chordmode {e:m}       #ukulele-tuning   #"o;4;3;2;"
+\storePredefinedDiagram #default-fret-table \chordmode {e':7}      #ukulele-tuning   #"4-(;4;4-);5;"
+\storePredefinedDiagram #default-fret-table \chordmode {f:7}       #ukulele-tuning   #"2;3;1;o;"
+\storePredefinedDiagram #default-fret-table \chordmode {fis,}      #ukulele-tuning   #"x;1;2;1;"
+\storePredefinedDiagram #default-fret-table \chordmode {fis'}      #ukulele-tuning   #"6-(;6;6-);9;"
+\storePredefinedDiagram #default-fret-table \chordmode {f'}        #ukulele-tuning   #"5-(;5;5-);8;"
+\storePredefinedDiagram #default-fret-table \chordmode {f:maj7}    #ukulele-tuning   #"2;o;o;o;"
+\storePredefinedDiagram #default-fret-table \chordmode {g:4.5.7^3} #ukulele-tuning   #"o;2;1;3;"
+\storePredefinedDiagram #default-fret-table \chordmode {g:7sus2}   #ukulele-tuning   #"o;2;1;o;"
+\storePredefinedDiagram #default-fret-table \chordmode {bes:3.5.9} #ukulele-tuning   #"3;2;1;3;"
+\storePredefinedDiagram #default-fret-table \chordmode {bes:maj7}  #ukulele-tuning   #"3;2;1;o;"
+\storePredefinedDiagram #default-fret-table \chordmode {b:7}       #ukulele-tuning   #"4;3;2;o;"
+\storePredefinedDiagram #default-fret-table \chordmode {b:sus4}    #ukulele-tuning   #"4;4;o;o;"
 
 
 \include "english.ly"
